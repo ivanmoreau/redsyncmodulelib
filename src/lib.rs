@@ -10,6 +10,8 @@ use reqwest::header::CONTENT_TYPE;
 use serde::{Serialize, Deserialize};
 use sha2::Sha256;
 use pbkdf2::pbkdf2;
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen::prelude::*;
 
 const NAMESPACE: &str = "identity.mozilla.com/picl/v1/";
 // https://token.services.mozilla.com/1.0/sync/1.5
@@ -38,8 +40,6 @@ fn kwe(name: &str, email: &str) -> String {
 #[allow(non_camel_case_types, non_snake_case)]
 struct CredentialsResult {
     emailUTF8: String,
-    passwordUTF8: String,
-    quickStretchedPW: [u8; STRETCHED_PASS_LENGTH_BYTES],
     authPW: [u8; HKDF_LENGTH],
     unwrapBKey: [u8; HKDF_LENGTH]
 }
@@ -52,8 +52,6 @@ fn setup_credentials(email_input: &str, password_input: &str) -> CredentialsResu
     let c = derive_hkdf::<HKDF_LENGTH>(&a, &kw("unwrapBkey").into_bytes(), HKDF_SALT);
     CredentialsResult { 
         emailUTF8: email_input.to_owned(), 
-        passwordUTF8: password_input.to_owned(), 
-        quickStretchedPW: a, 
         authPW: b, 
         unwrapBKey: c 
     }
@@ -109,8 +107,8 @@ struct TokenResponse {
 /// bare minimal for the next function. If error, this returns
 /// a message with the error instead of the TokenResponse.
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-pub async fn get_key_fetch_token(usr: &str, pw: &str) -> String {
-    let t = setup_credentials(usr, pw);
+pub async fn get_key_fetch_token(usr: String, pw: String) -> String {
+    let t = setup_credentials(&usr, &pw);
     let data = TokenRequest {
         email: t.emailUTF8,
         authPW: u8slice2hexstr(&t.authPW),
