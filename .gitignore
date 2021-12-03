@@ -1,3 +1,7 @@
 /pkg
-/target
+/target/debug
+/target/release
+/target/wasm*
+.*.json
+CACHE*
 Cargo.lock
