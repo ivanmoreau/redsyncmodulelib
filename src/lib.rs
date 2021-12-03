@@ -24,7 +24,7 @@ const HKDF_LENGTH: usize = 32;
 #[cfg(target_arch = "wasm32")]
 #[cfg(feature = "wee_alloc")]
 #[global_allocator]
-static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
+static GLOBAL_ALLOCATOR: WasmTracingAllocator<System> = WasmTracingAllocator(System);
 
 fn kw(name: &str) -> String {
     let r = NAMESPACE.to_owned() + name;
@@ -154,11 +154,11 @@ pub async fn get_key_fetch_token(usr: String, pw: String) -> String {
 /// - Derive the Sync key bundle from the Sync key.
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 pub async fn get_creds(tokenr: String /* TokenResponse */) -> String {
+    let v: serde_json::Value = serde_json::from_str(&tokenr).unwrap();
     let client = reqwest::Client::new();
     let body = client
     .post("https://proyecto.ivmoreau.com/login2")
-    .header(CONTENT_TYPE, "application/json")
-    .body(tokenr)
+    .json(&v)
     .send()
     .await
     .unwrap()
